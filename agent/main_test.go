@@ -4,11 +4,11 @@ import "testing"
 
 func TestParsePairCode(t *testing.T) {
 	good := map[string]PairCode{
-		"homeydeck-ha:http://192.168.1.10:8123/K7P2XM9Q4T":            {"http://192.168.1.10:8123", "K7P2XM9Q4T"},
-		"http://192.168.1.10:8123/k7p2x-m9q4t":                        {"http://192.168.1.10:8123", "K7P2XM9Q4T"},
-		"192.168.1.10:8123/K7P2XM9Q4T":                                {"http://192.168.1.10:8123", "K7P2XM9Q4T"},
-		"http://100.64.0.10:8123/K7P2XM9Q4T":                           {"http://100.64.0.10:8123", "K7P2XM9Q4T"},
-		"http://homeassistant.local:8123/K7P2XM9Q4T":                    {"http://homeassistant.local:8123", "K7P2XM9Q4T"},
+		"homeydeck-ha:http://192.168.1.10:8123/K7P2XM9Q4T":    {"http://192.168.1.10:8123", "K7P2XM9Q4T"},
+		"http://192.168.1.10:8123/k7p2x-m9q4t":                {"http://192.168.1.10:8123", "K7P2XM9Q4T"},
+		"192.168.1.10:8123/K7P2XM9Q4T":                        {"http://192.168.1.10:8123", "K7P2XM9Q4T"},
+		"http://100.64.0.10:8123/K7P2XM9Q4T":                  {"http://100.64.0.10:8123", "K7P2XM9Q4T"},
+		"http://homeassistant.local:8123/K7P2XM9Q4T":          {"http://homeassistant.local:8123", "K7P2XM9Q4T"},
 		"home.example.ts.net/K7P2XM9Q4T":                      {"https://home.example.ts.net", "K7P2XM9Q4T"},
 		"homeydeck-ha:https://home.example.ts.net/K7P2XM9Q4T": {"https://home.example.ts.net", "K7P2XM9Q4T"},
 	}
