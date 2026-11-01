@@ -1,0 +1,78 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Tag to release (created on the current commit if missing)
+        required: true
+
+permissions:
+  contents: write
+
+env:
+  TAG: ${{ github.event.inputs.tag || github.ref_name }}
+
+jobs:
+  agent:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: agent/go.mod
+          cache-dependency-path: agent/go.sum
+      - run: go test ./...
+        working-directory: agent
+      - run: ./agent/build.sh "$TAG"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: agent
+          path: agent/dist/homeydeck-ha-agent.exe
+
+  integration:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: agent/go.mod
+          cache-dependency-path: agent/go.sum
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+      - run: pip install -r requirements-test.txt
+      - run: python -m pytest -q
+      - name: Package the integration
+        run: |
+          version="${TAG#v}"
+          manifest=custom_components/homeydeck/manifest.json
+          jq --arg v "$version" '.version = $v' "$manifest" > "$manifest.new"
+          mv "$manifest.new" "$manifest"
+          find custom_components -name __pycache__ -type d -prune -exec rm -rf {} +
+          cd custom_components
+          zip -r ../homeydeck-integration.zip homeydeck
+      - uses: actions/upload-artifact@v4
+        with:
+          name: integration
+          path: homeydeck-integration.zip
+
+  publish:
+    needs: [agent, integration]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$TAG" dist/* \
+            --target "$GITHUB_SHA" \
+            --title "HomeyDeck HA $TAG" \
+            --generate-notes

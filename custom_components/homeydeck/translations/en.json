@@ -1,0 +1,39 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Add a PC",
+        "description": "Choose a name, and the address this PC will use to reach Home Assistant.",
+        "data": {
+          "name": "PC name",
+          "url": "Home Assistant address"
+        }
+      }
+    },
+    "progress": {
+      "wait_for_agent": "On the PC, copy this whole line, then double-click homeydeck-ha-agent.exe and click Yes:\n\n`{code}`\n\nThis screen moves on by itself once the PC is paired. The code works once, for {minutes} minutes."
+    },
+    "error": {
+      "invalid_url": "Enter a full address, like http://192.168.1.10:8123"
+    },
+    "abort": {
+      "code_expired": "The pairing code expired before the PC used it. Add the PC again to get a new one."
+    }
+  },
+  "entity": {
+    "binary_sensor": {
+      "online": { "name": "Online" },
+      "steam": { "name": "Steam" }
+    },
+    "button": {
+      "wake": { "name": "Wake" },
+      "launch_steam": { "name": "Launch Steam" },
+      "sleep": { "name": "Sleep" },
+      "restart": { "name": "Restart" }
+    },
+    "sensor": {
+      "booted": { "name": "Started" },
+      "agent_version": { "name": "Agent version" }
+    }
+  }
+}
