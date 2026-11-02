@@ -95,6 +95,7 @@ class PC:
         self.entry = entry
         self.online = False
         self.steam_running = False
+        self.sunshine_running = False
         self.booted_at: datetime | None = None
         self.agent_version: str | None = None
         self._last_seen = 0.0
@@ -150,6 +151,11 @@ class PC:
         steam = bool(msg.get("steamRunning"))
         if steam != self.steam_running:
             self.steam_running = steam
+            changed = True
+
+        sunshine = bool(msg.get("sunshineRunning"))
+        if sunshine != self.sunshine_running:
+            self.sunshine_running = sunshine
             changed = True
 
         version = msg.get("agentVersion")

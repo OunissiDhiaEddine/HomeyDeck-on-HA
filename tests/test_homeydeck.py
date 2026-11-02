@@ -162,6 +162,7 @@ async def test_real_agent_full_journey(
     online = "binary_sensor.gaming_pc_online"
     await _until(lambda: _state(hass, online) == "on")
     assert _state(hass, "binary_sensor.gaming_pc_steam") == "off"
+    assert _state(hass, "binary_sensor.gaming_pc_sunshine") == "off"
     assert _state(hass, "sensor.gaming_pc_agent_version") == "dev"
     assert _state(hass, "sensor.gaming_pc_started") not in ("unknown", "unavailable")
 
@@ -175,6 +176,11 @@ async def test_real_agent_full_journey(
     await _until(lambda: "would launch Steam" in agent.log())
 
     await hass.services.async_call(
+        "button", "press", {"entity_id": "button.gaming_pc_launch_sunshine"}, blocking=True
+    )
+    await _until(lambda: "would launch Sunshine" in agent.log())
+
+    await hass.services.async_call(
         "button", "press", {"entity_id": "button.gaming_pc_restart"}, blocking=True
     )
     await _until(lambda: "would reboot" in agent.log())
@@ -182,6 +188,7 @@ async def test_real_agent_full_journey(
     await _until(lambda: _state(hass, online) == "off")
     assert _state(hass, "button.gaming_pc_sleep") == "unavailable"
     assert _state(hass, "binary_sensor.gaming_pc_steam") == "unavailable"
+    assert _state(hass, "binary_sensor.gaming_pc_sunshine") == "unavailable"
 
     # Removing the PC in Home Assistant uninstalls the agent.
     await hass.config_entries.async_remove(entry.entry_id)
@@ -283,6 +290,39 @@ async def test_invalid_address_is_refused(hass: HomeAssistant) -> None:
         result["flow_id"], {"name": "PC", "url": "192.168.1.10"}
     )
     assert result["errors"] == {"url": "invalid_url"}
+
+
+async def test_older_agent_without_sunshine_reads_off(
+    hass: HomeAssistant, hass_client_no_auth
+) -> None:
+    """An agent from before Sunshine support keeps working."""
+    await _paired_entry(hass)
+    client = await hass_client_no_auth()
+    resp = await client.post(
+        "/api/homeydeck/status",
+        json={"steamRunning": True, "uptimeSeconds": 60, "agentVersion": "v0.1.0"},
+        headers={TOKEN_HEADER: TOKEN},
+    )
+    assert resp.status == 200
+    await hass.async_block_till_done()
+    assert _state(hass, "binary_sensor.gaming_pc_steam") == "on"
+    assert _state(hass, "binary_sensor.gaming_pc_sunshine") == "off"
+
+
+async def test_sunshine_reported_running(
+    hass: HomeAssistant, hass_client_no_auth
+) -> None:
+    """The sensor follows what the agent reports."""
+    await _paired_entry(hass)
+    client = await hass_client_no_auth()
+    resp = await client.post(
+        "/api/homeydeck/status",
+        json={"sunshineRunning": True, "uptimeSeconds": 60},
+        headers={TOKEN_HEADER: TOKEN},
+    )
+    assert resp.status == 200
+    await hass.async_block_till_done()
+    assert _state(hass, "binary_sensor.gaming_pc_sunshine") == "on"
 
 
 async def test_wake_sends_to_broadcast_and_works_while_off(hass: HomeAssistant) -> None:

@@ -1,7 +1,8 @@
 // HomeyDeck HA agent: a tiny background program for the Windows PC.
 //
-// It keeps a connection to Home Assistant, reports whether Steam is running,
-// and carries out launch_steam / sleep / reboot commands.
+// It keeps a connection to Home Assistant, reports whether Steam and Sunshine
+// are running, and carries out launch_steam / launch_sunshine / sleep / reboot
+// commands.
 //
 // Installing needs no terminal: in Home Assistant add the HomeyDeck integration
 // and copy the pairing line, then double-click homeydeck-ha-agent.exe (or type
@@ -411,6 +412,7 @@ func printStatus() error {
 	fmt.Println("server:          ", cfg.ServerURL)
 	fmt.Println("network card:    ", mac)
 	fmt.Println("steam running:   ", steamRunning())
+	fmt.Println("sunshine running:", sunshineRunning())
 	fmt.Println("start at sign-in:", autostartEnabled())
 	fmt.Println("log file:        ", logPath())
 	return nil

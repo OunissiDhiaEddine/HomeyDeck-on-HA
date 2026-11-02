@@ -24,7 +24,10 @@ const (
 	runValue         = "HomeyDeckHA"
 	uninstallKeyPath = `Software\Microsoft\Windows\CurrentVersion\Uninstall\HomeyDeckHA`
 	exeName          = "homeydeck-ha-agent.exe"
+	sunshineService  = "SunshineService"
 )
+
+var errSunshineDenied = errors.New("Windows didn't allow starting the Sunshine service. See \"Sunshine\" in the HomeyDeck on HA README for the one command that allows it")
 
 var (
 	kernel32           = windows.NewLazySystemDLL("kernel32.dll")
@@ -81,9 +84,9 @@ func uptime() time.Duration {
 	return time.Duration(ms) * time.Millisecond
 }
 
-// --- Steam -------------------------------------------------------------------
+// --- processes ---------------------------------------------------------------
 
-func steamRunning() bool {
+func processRunning(name string) bool {
 	snap, err := windows.CreateToolhelp32Snapshot(windows.TH32CS_SNAPPROCESS, 0)
 	if err != nil {
 		return false
@@ -93,12 +96,16 @@ func steamRunning() bool {
 	var entry windows.ProcessEntry32
 	entry.Size = uint32(unsafe.Sizeof(entry))
 	for err = windows.Process32First(snap, &entry); err == nil; err = windows.Process32Next(snap, &entry) {
-		if strings.EqualFold(windows.UTF16ToString(entry.ExeFile[:]), "steam.exe") {
+		if strings.EqualFold(windows.UTF16ToString(entry.ExeFile[:]), name) {
 			return true
 		}
 	}
 	return false
 }
+
+// --- Steam -------------------------------------------------------------------
+
+func steamRunning() bool { return processRunning("steam.exe") }
 
 func launchSteam() error {
 	// Ask for the normal library window. If Steam is set to start in Big
@@ -176,6 +183,82 @@ func steamExePath() string {
 		return ""
 	}
 	return exe
+}
+
+// --- Sunshine ----------------------------------------------------------------
+
+func sunshineRunning() bool { return processRunning("sunshine.exe") }
+
+// launchSunshine starts Sunshine's Windows service, or sunshine.exe when it has
+// no service. Sunshine warns against running a second copy, so a service that
+// Windows won't let us start is reported, not worked around.
+func launchSunshine() error {
+	hasService, err := startSunshineService()
+	if err != nil {
+		return err
+	}
+	if !hasService {
+		exe := sunshineExePath()
+		if exe == "" {
+			return errors.New("Sunshine doesn't seem to be installed on this PC")
+		}
+		cmd := exec.Command(exe)
+		cmd.Dir = filepath.Dir(exe)
+		cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CreationFlags: windows.CREATE_NO_WINDOW}
+		if err := cmd.Start(); err != nil {
+			return fmt.Errorf("could not start Sunshine: %w", err)
+		}
+		_ = cmd.Process.Release()
+	}
+	for range 15 {
+		if sunshineRunning() {
+			return nil
+		}
+		time.Sleep(time.Second)
+	}
+	return errors.New("Sunshine was started but isn't running after 15 seconds")
+}
+
+// startSunshineService reports whether Sunshine has a service, and whether it
+// could be started. A normal Windows user usually isn't allowed to start one.
+func startSunshineService() (bool, error) {
+	manager, err := windows.OpenSCManager(nil, nil, windows.SC_MANAGER_CONNECT)
+	if err != nil {
+		return false, nil // can't look, so treat it as having no service
+	}
+	defer windows.CloseServiceHandle(manager)
+	name, _ := windows.UTF16PtrFromString(sunshineService)
+	service, err := windows.OpenService(manager, name, windows.SERVICE_START)
+	if errors.Is(err, windows.ERROR_SERVICE_DOES_NOT_EXIST) {
+		return false, nil
+	}
+	if errors.Is(err, windows.ERROR_ACCESS_DENIED) {
+		return true, errSunshineDenied
+	}
+	if err != nil {
+		return true, fmt.Errorf("could not open the Sunshine service: %w", err)
+	}
+	defer windows.CloseServiceHandle(service)
+	err = windows.StartService(service, 0, nil)
+	if errors.Is(err, windows.ERROR_ACCESS_DENIED) {
+		return true, errSunshineDenied
+	}
+	if err != nil && !errors.Is(err, windows.ERROR_SERVICE_ALREADY_RUNNING) {
+		return true, fmt.Errorf("could not start the Sunshine service: %w", err)
+	}
+	return true, nil
+}
+
+func sunshineExePath() string {
+	for _, env := range []string{"ProgramFiles", "ProgramW6432", "ProgramFiles(x86)"} {
+		if base := os.Getenv(env); base != "" {
+			exe := filepath.Join(base, "Sunshine", "sunshine.exe")
+			if _, err := os.Stat(exe); err == nil {
+				return exe
+			}
+		}
+	}
+	return ""
 }
 
 // --- power -------------------------------------------------------------------

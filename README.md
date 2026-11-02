@@ -1,6 +1,6 @@
 # HomeyDeck on Home Assistant
 
-Wake, check and control your Windows gaming PC from Home Assistant. Made for Steam Remote Play.
+Wake, check and control your Windows gaming PC from Home Assistant. Made for Steam Remote Play and Sunshine.
 
 This is [HomeyDeck](https://github.com/OunissiDhiaEddine/HomeyDeck) without the web app, Vercel, DDNS or an open port. Home Assistant is already on your home network, so it can wake the PC directly.
 
@@ -14,8 +14,8 @@ In Home Assistant each PC gets:
 
 | Type | Entities |
 |---|---|
-| Buttons | Wake, Launch Steam, Sleep, Restart |
-| Sensors | Online, Steam, Started, Agent version |
+| Buttons | Wake, Launch Steam, Launch Sunshine, Sleep, Restart |
+| Sensors | Online, Steam, Sunshine, Started, Agent version |
 
 ## Install
 
@@ -26,6 +26,18 @@ In Home Assistant each PC gets:
 The agent reports the PC's MAC address, so there's nothing to look up. The PC still needs Wake-on-LAN turned on in its BIOS and network card settings, and Ethernet is far more reliable for waking than Wi-Fi.
 
 It can run beside the original HomeyDeck agent: they use different names, folders and startup entries.
+
+## Sunshine
+
+**Sunshine** turns on when `sunshine.exe` is running. **Launch Sunshine** starts Sunshine's Windows service, or `sunshine.exe` from `Program Files\Sunshine` if it has no service.
+
+The agent runs as a normal user, and Windows usually doesn't let those start services. If the button reports that, allow your Windows user to start only this service. Run this once in PowerShell as administrator:
+
+```powershell
+$sid = ([System.Security.Principal.WindowsIdentity]::GetCurrent()).User.Value; $sddl = (sc.exe sdshow SunshineService | Out-String).Trim(); sc.exe sdset SunshineService ($sddl -replace '^(D:(?:\([^)]*\))*)', "`$1(A;;RPLCLO;;;$sid)")
+```
+
+Run it while signed in as the same Windows user that runs the agent. It adds only the right to start and read that one service.
 
 ## Update
 
@@ -46,7 +58,7 @@ To remove the integration too, delete the `custom_components/homeydeck` folder a
 
 - The agent has no Home Assistant login. A one-time pairing code, valid for 15 minutes, is traded for a random token, and Home Assistant stores only the token's hash.
 - On the PC, the token is encrypted with Windows DPAPI, readable only by that Windows user.
-- The agent accepts only `launch_steam`, `sleep` and `reboot`. There's no remote shell. A command not picked up within 90 seconds is dropped.
+- The agent accepts only `launch_steam`, `launch_sunshine`, `sleep` and `reboot`. There's no remote shell. A command not picked up within 90 seconds is dropped.
 - The PC never accepts inbound connections.
 - Plain `http` is only allowed to local network and Tailscale addresses. Anywhere else the address must be `https`.
 - Wrong pairing codes count towards Home Assistant's IP ban, if that's turned on.

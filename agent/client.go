@@ -106,12 +106,13 @@ func (c *Client) Run(ctx context.Context) error {
 }
 
 type statusMsg struct {
-	Hostname      string `json:"hostname"`
-	SteamRunning  bool   `json:"steamRunning"`
-	UptimeSeconds int64  `json:"uptimeSeconds"`
-	AgentVersion  string `json:"agentVersion"`
-	MAC           string `json:"mac,omitempty"`
-	Broadcast     string `json:"broadcast,omitempty"`
+	Hostname        string `json:"hostname"`
+	SteamRunning    bool   `json:"steamRunning"`
+	SunshineRunning bool   `json:"sunshineRunning"`
+	UptimeSeconds   int64  `json:"uptimeSeconds"`
+	AgentVersion    string `json:"agentVersion"`
+	MAC             string `json:"mac,omitempty"`
+	Broadcast       string `json:"broadcast,omitempty"`
 }
 
 type resultMsg struct {
@@ -128,16 +129,17 @@ type pollReply struct {
 	} `json:"commands"`
 }
 
-func (c *Client) status(steam bool) statusMsg {
+func (c *Client) status() statusMsg {
 	hostname, _ := os.Hostname()
 	mac, broadcast := networkDetails(c.cfg.ServerURL)
 	return statusMsg{
-		Hostname:      hostname,
-		SteamRunning:  steam,
-		UptimeSeconds: int64(uptime().Seconds()),
-		AgentVersion:  version,
-		MAC:           mac,
-		Broadcast:     broadcast,
+		Hostname:        hostname,
+		SteamRunning:    steamRunning(),
+		SunshineRunning: sunshineRunning(),
+		UptimeSeconds:   int64(uptime().Seconds()),
+		AgentVersion:    version,
+		MAC:             mac,
+		Broadcast:       broadcast,
 	}
 }
 
@@ -156,7 +158,7 @@ func (c *Client) session(ctx context.Context) error {
 		pctx, cancel := context.WithTimeout(sctx, pollTimeout)
 		c.setCancelPoll(cancel)
 		var reply pollReply
-		err := c.post(pctx, "/api/homeydeck/poll", c.status(steamRunning()), &reply)
+		err := c.post(pctx, "/api/homeydeck/poll", c.status(), &reply)
 		woken := errors.Is(pctx.Err(), context.Canceled) && sctx.Err() == nil
 		cancel()
 		if woken {
@@ -179,11 +181,11 @@ func (c *Client) setCancelPoll(cancel context.CancelFunc) {
 	c.cancelPoll = cancel
 }
 
-// watch reports a Steam change right away, and notices when the PC slept: the
+// watch reports a Steam or Sunshine change right away, and notices when the PC slept: the
 // request held open across a sleep is dead, and waiting out its timeout would
 // show the PC as offline for no reason.
 func (c *Client) watch(ctx context.Context) {
-	steam := steamRunning()
+	steam, sunshine := steamRunning(), sunshineRunning()
 	last := time.Now().Round(0) // wall clock, which keeps counting during sleep
 	tick := time.NewTicker(c.checkEvery)
 	defer tick.Stop()
@@ -203,11 +205,12 @@ func (c *Client) watch(ctx context.Context) {
 			c.mu.Unlock()
 		}
 		last = now
-		if running := steamRunning(); running != steam {
-			steam = running
+		nowSteam, nowSunshine := steamRunning(), sunshineRunning()
+		if nowSteam != steam || nowSunshine != sunshine {
+			steam, sunshine = nowSteam, nowSunshine
 			rctx, cancel := context.WithTimeout(ctx, requestTimeout)
 			// A failure here is fine: the next poll carries the same news.
-			if err := c.post(rctx, "/api/homeydeck/status", c.status(steam), nil); err != nil {
+			if err := c.post(rctx, "/api/homeydeck/status", c.status(), nil); err != nil {
 				log.Printf("status: %v", err)
 			}
 			cancel()
@@ -414,6 +417,11 @@ func runAction(action string) error {
 			return nil
 		}
 		return launchSteam()
+	case "launch_sunshine":
+		if sunshineRunning() {
+			return nil
+		}
+		return launchSunshine()
 	case "reboot":
 		return reboot() // Windows waits a few seconds before restarting
 	case "sleep":

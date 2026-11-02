@@ -1,4 +1,4 @@
-"""Wake, launch Steam, sleep and restart."""
+"""Wake, launch Steam, launch Sunshine, sleep and restart."""
 
 from __future__ import annotations
 
@@ -7,7 +7,12 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import HomeyDeckConfigEntry
-from .const import ACTION_LAUNCH_STEAM, ACTION_REBOOT, ACTION_SLEEP
+from .const import (
+    ACTION_LAUNCH_STEAM,
+    ACTION_LAUNCH_SUNSHINE,
+    ACTION_REBOOT,
+    ACTION_SLEEP,
+)
 from .entity import HomeyDeckEntity
 from .pc import PC
 
@@ -23,6 +28,7 @@ async def async_setup_entry(
         [
             WakeButton(pc),
             CommandButton(pc, "launch_steam", ACTION_LAUNCH_STEAM),
+            CommandButton(pc, "launch_sunshine", ACTION_LAUNCH_SUNSHINE),
             CommandButton(pc, "sleep", ACTION_SLEEP),
             CommandButton(pc, "restart", ACTION_REBOOT, ButtonDeviceClass.RESTART),
         ]

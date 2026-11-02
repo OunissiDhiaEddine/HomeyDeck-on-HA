@@ -151,6 +151,53 @@ func TestSteamChangeIsReportedWithoutDroppingThePoll(t *testing.T) {
 	}
 }
 
+func TestSunshineChangeIsReported(t *testing.T) {
+	status := make(chan statusMsg, 1)
+	release := make(chan struct{})
+	mux := http.NewServeMux()
+	mux.HandleFunc("/api/homeydeck/poll", func(w http.ResponseWriter, r *http.Request) {
+		select {
+		case <-release:
+		case <-r.Context().Done():
+		}
+		_, _ = w.Write([]byte(`{"commands":[]}`))
+	})
+	mux.HandleFunc("/api/homeydeck/status", func(w http.ResponseWriter, r *http.Request) {
+		var s statusMsg
+		_ = json.NewDecoder(r.Body).Decode(&s)
+		status <- s
+		_, _ = w.Write([]byte(`{}`))
+	})
+	srv := httptest.NewServer(mux)
+	defer srv.Close()
+	defer close(release)
+
+	t.Setenv("HOMEYDECK_FAKE_SUNSHINE", "0")
+	c := NewClient(testConfig(srv.URL))
+	c.checkEvery = 20 * time.Millisecond
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go func() { _ = c.Run(ctx) }()
+	time.Sleep(100 * time.Millisecond)
+	t.Setenv("HOMEYDECK_FAKE_SUNSHINE", "1")
+
+	select {
+	case s := <-status:
+		if !s.SunshineRunning {
+			t.Fatal("expected Sunshine running")
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("no status")
+	}
+}
+
+func TestLaunchSunshineSkippedWhenRunning(t *testing.T) {
+	t.Setenv("HOMEYDECK_FAKE_SUNSHINE", "1")
+	if err := runAction("launch_sunshine"); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestBroadcastOf(t *testing.T) {
 	_, ipnet, _ := net.ParseCIDR("192.168.100.0/24")
 	ipnet.IP = net.ParseIP("192.168.100.24").To4()
