@@ -23,11 +23,13 @@
   "entity": {
     "binary_sensor": {
       "online": { "name": "Online" },
-      "steam": { "name": "Steam" }
+      "steam": { "name": "Steam" },
+      "sunshine": { "name": "Sunshine" }
     },
     "button": {
       "wake": { "name": "Wake" },
       "launch_steam": { "name": "Launch Steam" },
+      "launch_sunshine": { "name": "Launch Sunshine" },
       "sleep": { "name": "Sleep" },
       "restart": { "name": "Restart" }
     },

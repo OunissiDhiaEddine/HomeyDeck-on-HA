@@ -1,4 +1,4 @@
-"""Whether the PC is on, and whether Steam is running."""
+"""Whether the PC is on, and whether Steam and Sunshine are running."""
 
 from __future__ import annotations
 
@@ -20,7 +20,8 @@ async def async_setup_entry(
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Add the sensors."""
-    async_add_entities([OnlineSensor(entry.runtime_data), SteamSensor(entry.runtime_data)])
+    pc = entry.runtime_data
+    async_add_entities([OnlineSensor(pc), SteamSensor(pc), SunshineSensor(pc)])
 
 
 class OnlineSensor(HomeyDeckEntity, BinarySensorEntity):
@@ -54,3 +55,22 @@ class SteamSensor(HomeyDeckEntity, BinarySensorEntity):
     def is_on(self) -> bool:
         """Return whether Steam is running."""
         return self.pc.steam_running
+
+
+class SunshineSensor(HomeyDeckEntity, BinarySensorEntity):
+    """On when Sunshine is running."""
+
+    _attr_device_class = BinarySensorDeviceClass.RUNNING
+
+    def __init__(self, pc: PC) -> None:
+        super().__init__(pc, "sunshine")
+
+    @property
+    def available(self) -> bool:
+        """Only known while the PC is on."""
+        return self.pc.online
+
+    @property
+    def is_on(self) -> bool:
+        """Return whether Sunshine is running."""
+        return self.pc.sunshine_running
