@@ -68,8 +68,10 @@ func TestPollCarriesOutCommandAndReportsResult(t *testing.T) {
 }
 
 func TestUnknownCommandIsRefused(t *testing.T) {
-	if err := runAction("format_c"); err == nil {
-		t.Fatal("expected an error")
+	for _, action := range []string{"format_c", "launch_sunshine"} {
+		if err := runAction(action); err == nil {
+			t.Fatalf("%s: expected an error", action)
+		}
 	}
 }
 
@@ -188,13 +190,6 @@ func TestSunshineChangeIsReported(t *testing.T) {
 		}
 	case <-time.After(5 * time.Second):
 		t.Fatal("no status")
-	}
-}
-
-func TestLaunchSunshineSkippedWhenRunning(t *testing.T) {
-	t.Setenv("HOMEYDECK_FAKE_SUNSHINE", "1")
-	if err := runAction("launch_sunshine"); err != nil {
-		t.Fatal(err)
 	}
 }
 

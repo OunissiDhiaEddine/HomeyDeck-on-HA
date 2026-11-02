@@ -29,7 +29,6 @@
     "button": {
       "wake": { "name": "Wake" },
       "launch_steam": { "name": "Launch Steam" },
-      "launch_sunshine": { "name": "Launch Sunshine" },
       "sleep": { "name": "Sleep" },
       "restart": { "name": "Restart" }
     },
