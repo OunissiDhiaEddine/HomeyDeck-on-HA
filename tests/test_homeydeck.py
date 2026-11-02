@@ -176,11 +176,6 @@ async def test_real_agent_full_journey(
     await _until(lambda: "would launch Steam" in agent.log())
 
     await hass.services.async_call(
-        "button", "press", {"entity_id": "button.gaming_pc_launch_sunshine"}, blocking=True
-    )
-    await _until(lambda: "would launch Sunshine" in agent.log())
-
-    await hass.services.async_call(
         "button", "press", {"entity_id": "button.gaming_pc_restart"}, blocking=True
     )
     await _until(lambda: "would reboot" in agent.log())

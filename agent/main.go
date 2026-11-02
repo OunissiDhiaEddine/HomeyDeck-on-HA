@@ -1,8 +1,7 @@
 // HomeyDeck HA agent: a tiny background program for the Windows PC.
 //
 // It keeps a connection to Home Assistant, reports whether Steam and Sunshine
-// are running, and carries out launch_steam / launch_sunshine / sleep / reboot
-// commands.
+// are running, and carries out launch_steam / sleep / reboot commands.
 //
 // Installing needs no terminal: in Home Assistant add the HomeyDeck integration
 // and copy the pairing line, then double-click homeydeck-ha-agent.exe (or type

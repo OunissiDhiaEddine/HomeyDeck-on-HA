@@ -417,11 +417,6 @@ func runAction(action string) error {
 			return nil
 		}
 		return launchSteam()
-	case "launch_sunshine":
-		if sunshineRunning() {
-			return nil
-		}
-		return launchSunshine()
 	case "reboot":
 		return reboot() // Windows waits a few seconds before restarting
 	case "sleep":
